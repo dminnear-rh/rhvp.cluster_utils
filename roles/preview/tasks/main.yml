@@ -1,0 +1,144 @@
+---
+- name: Resolve overrides (ansible var -> env var -> default)
+  ansible.builtin.set_fact:
+    resolve_values_bin: >-
+      {{
+        resolve_values_bin
+          | default(lookup("env", "RESOLVE_VALUES_BIN"), true)
+          | default("/usr/local/bin/resolve-values", true)
+      }}
+    cluster_group: >-
+      {{
+        cluster_group
+          | default(lookup("env", "CLUSTER_GROUP"), true)
+          | default("", true)
+      }}
+    cluster_platform: >-
+      {{
+        cluster_platform
+          | default(lookup("env", "CLUSTER_PLATFORM"), true)
+          | default("", true)
+      }}
+    cluster_version: >-
+      {{
+        cluster_version
+          | default(lookup("env", "CLUSTER_VERSION"), true)
+          | default("", true)
+      }}
+    cluster_name: >-
+      {{
+        cluster_name
+          | default(lookup("env", "CLUSTER_NAME"), true)
+          | default("", true)
+      }}
+    hub_cluster_domain: >-
+      {{
+        hub_cluster_domain
+          | default(lookup("env", "HUB_CLUSTER_DOMAIN"), true)
+          | default("", true)
+      }}
+    local_cluster_domain: >-
+      {{
+        local_cluster_domain
+          | default(lookup("env", "LOCAL_CLUSTER_DOMAIN"), true)
+          | default("", true)
+      }}
+    cluster_id: >-
+      {{
+        cluster_id
+          | default(lookup("env", "CLUSTER_ID"), true)
+          | default("", true)
+      }}
+    extra_value_files: >-
+      {{
+        extra_value_files
+          | default(lookup("env", "EXTRA_VALUE_FILES"), true)
+          | default("", true)
+      }}
+    render_helm: >-
+      {{
+        render_helm
+          | default(lookup("env", "RENDER_HELM"), true)
+          | default(true, true)
+          | bool
+      }}
+    render_value_files: >-
+      {{
+        render_value_files
+          | default(lookup("env", "RENDER_VALUE_FILES"), true)
+          | default(false, true)
+          | bool
+      }}
+    with_managed_cluster: >-
+      {{
+        with_managed_cluster
+          | default(lookup("env", "WITH_MANAGED_CLUSTER"), true)
+          | default("", true)
+      }}
+    spoke_cluster_name: >-
+      {{
+        spoke_cluster_name
+          | default(lookup("env", "SPOKE_CLUSTER_NAME"), true)
+          | default("", true)
+      }}
+
+- name: Check that resolve-values binary exists
+  ansible.builtin.stat:
+    path: "{{ resolve_values_bin }}"
+  register: resolve_values_stat
+
+- name: Fail if resolve-values binary is missing
+  ansible.builtin.assert:
+    that: resolve_values_stat.stat.exists
+    fail_msg: >-
+      resolve-values binary not found at {{ resolve_values_bin }}.
+      Set -e resolve_values_bin=/path/to/resolve-values or export RESOLVE_VALUES_BIN.
+
+- name: Build resolve-values command
+  ansible.builtin.set_fact:
+    resolve_values_cmd: >-
+      {{ resolve_values_bin }}
+      --patterndir {{ pattern_dir }}
+      {% if cluster_group | default('', true) | string | trim | length > 0 %}
+      --cluster-group {{ cluster_group }}
+      {% endif %}
+      {% if cluster_platform | default('', true) | string | trim | length > 0 %}
+      --cluster-platform {{ cluster_platform }}
+      {% endif %}
+      {% if cluster_version | default('', true) | string | trim | length > 0 %}
+      --cluster-version {{ cluster_version }}
+      {% endif %}
+      {% if cluster_name | default('', true) | string | trim | length > 0 %}
+      --cluster-name {{ cluster_name }}
+      {% endif %}
+      {% if hub_cluster_domain | default('', true) | string | trim | length > 0 %}
+      --hub-cluster-domain {{ hub_cluster_domain }}
+      {% endif %}
+      {% if local_cluster_domain | default('', true) | string | trim | length > 0 %}
+      --local-cluster-domain {{ local_cluster_domain }}
+      {% endif %}
+      {% if cluster_id | default('', true) | string | trim | length > 0 %}
+      --cluster-id {{ cluster_id }}
+      {% endif %}
+      {% if extra_value_files | default('', true) | string | trim | length > 0 %}
+      --extra-value-files {{ extra_value_files }}
+      {% endif %}
+      {% if render_value_files | bool %}
+      --render-value-files
+      {% elif render_helm | bool %}
+      --render-helm
+      {% if with_managed_cluster | default('', true) | string | trim | length > 0 %}
+      --with-managedcluster {{ with_managed_cluster }}
+      --spoke-cluster-name {{ spoke_cluster_name }}
+      {% endif %}
+      {% endif %}
+
+- name: Run resolve-values
+  ansible.builtin.command:
+    cmd: "{{ resolve_values_cmd }}"
+  register: resolve_values_output
+  changed_when: false
+
+- name: Display resolve-values output
+  ansible.builtin.debug:
+    msg: "{{ resolve_values_output.stdout }}"

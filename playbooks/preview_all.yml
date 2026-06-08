@@ -1,0 +1,34 @@
+---
+- name: Preview rendered Helm charts for hub and all spoke cluster groups
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - role: pattern_settings
+
+  tasks:
+    - name: Load hub cluster group values
+      ansible.builtin.set_fact:
+        hub_values: "{{ lookup('file', pattern_dir + '/values-' + main_clustergroup + '.yaml') | from_yaml }}"
+
+    - name: Extract managed cluster group names
+      ansible.builtin.set_fact:
+        managed_cluster_groups: >-
+          {{
+            hub_values.clusterGroup.managedClusterGroups | default({})
+              | dict2items
+              | map(attribute='value')
+              | map(attribute='name')
+              | list
+          }}
+
+    - name: Preview hub cluster group ({{ main_clustergroup }})
+      ansible.builtin.include_role:
+        name: preview
+
+    - name: Preview spoke cluster group
+      ansible.builtin.include_role:
+        name: preview
+      vars:
+        cluster_group: "{{ item }}"
+      loop: "{{ managed_cluster_groups }}"

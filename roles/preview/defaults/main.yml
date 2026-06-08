@@ -1,0 +1,14 @@
+---
+resolve_values_bin: /usr/local/bin/resolve-values
+cluster_group: ""
+cluster_platform: ""
+cluster_version: ""
+cluster_name: ""
+hub_cluster_domain: ""
+local_cluster_domain: ""
+cluster_id: ""
+extra_value_files: ""
+render_helm: true
+render_value_files: false
+with_managed_cluster: ""
+spoke_cluster_name: ""

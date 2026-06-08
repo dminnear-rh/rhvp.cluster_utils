@@ -1,0 +1,12 @@
+---
+- name: Preview rendered Helm charts via resolve-values
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - role: pattern_settings
+
+  tasks:
+    - name: Preview pattern charts
+      ansible.builtin.include_role:
+        name: preview
